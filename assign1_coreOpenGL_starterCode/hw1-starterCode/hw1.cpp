@@ -41,6 +41,7 @@ typedef enum { ROTATE, TRANSLATE, SCALE } CONTROL_STATE;
 CONTROL_STATE controlState = ROTATE;
 
 // state of the world
+//these values will change as we move our mouse
 float landRotate[3] = { 0.0f, 0.0f, 0.0f };
 float landTranslate[3] = { 0.0f, 0.0f, 0.0f };
 float landScale[3] = { 1.0f, 1.0f, 1.0f };
@@ -82,6 +83,29 @@ void displayFunc()
   matrix.LoadIdentity();
   matrix.LookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
+
+	//consistently output mouse position
+//	cout << "X: " << mousePos[0] << "  Y: " << mousePos[1] << endl;
+	//rotation axis....
+	matrix.Rotate(landRotate[0], 1, 0, 0);
+	matrix.Rotate(landRotate[1], 0, 1, 0);
+	matrix.Rotate(landRotate[2], 0, 0, 1);
+
+
+
+
+
+	//mouse detect here based on resuluts change translate vecotrs
+//	TODO Slide 6: Tronslate Rotate and Scale
+	/*matrix.Translate()
+	matrix.Rotate()
+	matrix.Scale()*/
+	/*
+	 * m is the modelview matrix
+	 * p is the projection matrix
+	 * INFO: 07-Shaders-26
+	 * */
+
   float m[16];
   matrix.SetMatrixMode(OpenGLMatrix::ModelView);
   matrix.GetMatrix(m);
@@ -89,9 +113,17 @@ void displayFunc()
   float p[16];
   matrix.SetMatrixMode(OpenGLMatrix::Projection);
   matrix.GetMatrix(p);
-  //
+  //slide 5 hsas to uploade te array p to
   // bind shader
+
+
   pipelineProgram->Bind();
+	/*slide 7 of tips*/
+	//added
+	pipelineProgram->Bind();
+
+	//It sawas to generate the VBO and VAO and upload them to GPU
+
 
   // set variable
   pipelineProgram->SetModelViewMatrix(m);
@@ -124,6 +156,8 @@ void reshapeFunc(int w, int h)
 
 void mouseMotionDragFunc(int x, int y)
 {
+
+	//xy records the coordinates of the mouse on the screen
   // mouse has moved and one of the mouse buttons is pressed (dragging)
 
   // the change in mouse position since the last invocation of this function
@@ -262,6 +296,15 @@ void initScene(int argc, char *argv[])
   }
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+	/*
+	 * read in the map
+	 * get the height for each point
+	 * */
+	//double for loop through dimensitons of img
+
+	glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y)
+
 
   // modify the following code accordingly
   glm::vec3 triangle[3] = {
