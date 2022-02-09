@@ -91,7 +91,9 @@ void displayFunc()
 	matrix.Rotate(landRotate[1], 0, 1, 0);
 	matrix.Rotate(landRotate[2], 0, 0, 1);
 
+	matrix.Translate(landTranslate[0],landTranslate[1],landTranslate[2]);
 
+	matrix.Scale(landScale[0],landScale[1],landScale[2]);
 
 
 
@@ -303,7 +305,7 @@ void initScene(int argc, char *argv[])
 	 * */
 	//double for loop through dimensitons of img
 
-	glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y)
+//	glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y)
 
 
   // modify the following code accordingly
