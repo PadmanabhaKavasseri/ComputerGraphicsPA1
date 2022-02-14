@@ -52,9 +52,17 @@ char windowTitle[512] = "CSCI 420 homework I";
 
 ImageIO * heightmapImage;
 
+
 GLuint triVertexBuffer, triColorVertexBuffer;
 GLuint triVertexArray;
 int sizeTri;
+
+
+//HeightMap Definitions
+GLuint hmVertexBuffer, hmColorVertexBuffer, hmVertexArray;
+int sizeHm;
+
+
 
 OpenGLMatrix matrix;
 BasicPipelineProgram * pipelineProgram;
@@ -81,7 +89,7 @@ void displayFunc()
 
   matrix.SetMatrixMode(OpenGLMatrix::ModelView);
   matrix.LoadIdentity();
-  matrix.LookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+  matrix.LookAt(10, 10, 10, 1, 1, 1, 10, 1, 1);
 
 
 	//consistently output mouse position
@@ -96,12 +104,6 @@ void displayFunc()
 	matrix.Scale(landScale[0],landScale[1],landScale[2]);
 
 
-
-	//mouse detect here based on resuluts change translate vecotrs
-//	TODO Slide 6: Tronslate Rotate and Scale
-	/*matrix.Translate()
-	matrix.Rotate()
-	matrix.Scale()*/
 	/*
 	 * m is the modelview matrix
 	 * p is the projection matrix
@@ -124,15 +126,15 @@ void displayFunc()
 	//added
 	pipelineProgram->Bind();
 
-	//It sawas to generate the VBO and VAO and upload them to GPU
+	//It says to generate the VBO and VAO and upload them to GPU
 
 
   // set variable
   pipelineProgram->SetModelViewMatrix(m);
   pipelineProgram->SetProjectionMatrix(p);
 
-  glBindVertexArray(triVertexArray);
-  glDrawArrays(GL_TRIANGLES, 0, sizeTri);
+  glBindVertexArray(hmVertexArray);
+  glDrawArrays(GL_POINTS, 0, sizeHm);
 
   glutSwapBuffers();
 }
@@ -275,6 +277,18 @@ void keyboardFunc(unsigned char key, int x, int y)
     case 27: // ESC key
       exit(0); // exit the program
     break;
+		case '1':
+			cout << "You pressed 1" << endl;
+		break;
+	  case '2':
+		  cout << "You pressed 2" << endl;
+		  break;
+	  case '3':
+		  cout << "You pressed 3" << endl;
+		  break;
+		case '4':
+		  cout << "You pressed 4" << endl;
+		  break;
 
     case ' ':
       cout << "You pressed the spacebar." << endl;
@@ -303,54 +317,102 @@ void initScene(int argc, char *argv[])
 	 * read in the map
 	 * get the height for each point
 	 * */
-	//double for loop through dimensitons of img
+	int imghi = heightmapImage->getHeight();
+	int imgwd	= heightmapImage->getWidth();
 
-//	glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y)
+	glm::vec3 * map = new glm::vec3 [imghi*imgwd];
+
+	for(int x = 0; x<imghi; x++){
+		for(int y = 0; y<imgwd; y++){
+			map[y*imghi+x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y);
+		}
+	}
 
 
-  // modify the following code accordingly
+	std::cout << map[11][1] << std::endl;
+
+
+/*
+   modify the following code accordingly
   glm::vec3 triangle[3] = {
-    glm::vec3(0, 0, 0), 
+    glm::vec3(0, 0, 0),
     glm::vec3(0, 1, 0),
     glm::vec3(1, 0, 0)
   };
 
+	color will be all white right...
   glm::vec4 color[3] = {
     {0, 0, 1, 1},
     {1, 0, 0, 1},
     {0, 1, 0, 1},
   };
 
-  glGenBuffers(1, &triVertexBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 3, triangle,
-               GL_STATIC_DRAW);
-
-  glGenBuffers(1, &triColorVertexBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * 3, color, GL_STATIC_DRAW);
+	GLuint heightMapBuffer;
+	GLuint hmVertexArray;
+	glGenBuffers(1, &triVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 3, triangle,
+	             GL_STATIC_DRAW);
 
   pipelineProgram = new BasicPipelineProgram;
   int ret = pipelineProgram->Init(shaderBasePath);
   if (ret != 0) abort();
 
-  glGenVertexArrays(1, &triVertexArray);
-  glBindVertexArray(triVertexArray);
-  glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
+	glGenVertexArrays(1, &triVertexArray);
+	glBindVertexArray(triVertexArray);
+	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
 
   GLuint loc =
       glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
   glEnableVertexAttribArray(loc);
   glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
-  glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer); //what
   loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
   glEnableVertexAttribArray(loc);
   glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
-  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);*/
 
-  sizeTri = 3;
+
+	glGenBuffers(1, &hmVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, hmVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * imghi*imgwd, map,
+	             GL_STATIC_DRAW);
+
+
+	//284... we dont need color rn right?
+
+//	glGenBuffers(1, &hmColorVertexBuffer);
+//	glBindBuffer(GL_ARRAY_BUFFER, hmColorVertexBuffer);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * imghi*imgwd, color, GL_STATIC_DRAW);
+
+
+	pipelineProgram = new BasicPipelineProgram;
+	int ret = pipelineProgram->Init(shaderBasePath);
+	if (ret != 0) abort();
+
+	glGenVertexArrays(1, &hmVertexArray);
+	glBindVertexArray(hmVertexArray);
+	glBindBuffer(GL_ARRAY_BUFFER, hmVertexBuffer);
+
+	GLuint loc =
+					glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+
+	//301... we dont need color rn right?
+//	glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer);
+//	loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+//	glEnableVertexAttribArray(loc);
+//	glVertexAttribPointer(loc, imghi*imgwd, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+	glEnable(GL_DEPTH_TEST);
+
+
+//  sizeTri = 3;
+	sizeHm = imghi*imgwd;
 
   std::cout << "GL error: " << glGetError() << std::endl;
 }
