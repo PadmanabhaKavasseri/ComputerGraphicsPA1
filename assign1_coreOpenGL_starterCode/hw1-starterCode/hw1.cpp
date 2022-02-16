@@ -32,7 +32,7 @@
 using namespace std;
 
 int mousePos[2]; // x,y coordinate of the mouse position
-
+int renderMode = 1;
 int leftMouseButton = 0; // 1 if pressed, 0 if not 
 int middleMouseButton = 0; // 1 if pressed, 0 if not
 int rightMouseButton = 0; // 1 if pressed, 0 if not
@@ -89,12 +89,11 @@ void displayFunc()
 
   matrix.SetMatrixMode(OpenGLMatrix::ModelView);
   matrix.LoadIdentity();
-  matrix.LookAt(10, 10, 10, 1, 1, 1, 10, 1, 1);
+
+	//add function to change y based on size of image
+	matrix.LookAt(128, 200, 128, 128, 0, -128, 0, 0, -1);
 
 
-	//consistently output mouse position
-//	cout << "X: " << mousePos[0] << "  Y: " << mousePos[1] << endl;
-	//rotation axis....
 	matrix.Rotate(landRotate[0], 1, 0, 0);
 	matrix.Rotate(landRotate[1], 0, 1, 0);
 	matrix.Rotate(landRotate[2], 0, 0, 1);
@@ -134,7 +133,20 @@ void displayFunc()
   pipelineProgram->SetProjectionMatrix(p);
 
   glBindVertexArray(hmVertexArray);
-  glDrawArrays(GL_POINTS, 0, sizeHm);
+
+	//create some global var to dict
+	if(renderMode==1){
+		glDrawArrays(GL_POINTS, 0, sizeHm);
+	}
+	else if(renderMode==2){
+		glDrawArrays(GL_LINES, 0, sizeHm);
+	}
+	else if(renderMode==3){
+		glDrawArrays(GL_TRIANGLES, 0, sizeHm);
+	}
+
+
+
 
   glutSwapBuffers();
 }
@@ -155,7 +167,7 @@ void reshapeFunc(int w, int h)
 
   matrix.SetMatrixMode(OpenGLMatrix::Projection);
   matrix.LoadIdentity();
-  matrix.Perspective(54.0f, (float)w / (float)h, 0.01f, 100.0f);
+  matrix.Perspective(54.0f, (float)w / (float)h, 0.01f, 1000.0f);
 }
 
 void mouseMotionDragFunc(int x, int y)
@@ -279,15 +291,19 @@ void keyboardFunc(unsigned char key, int x, int y)
     break;
 		case '1':
 			cout << "You pressed 1" << endl;
+			renderMode = 1;
 		break;
 	  case '2':
 		  cout << "You pressed 2" << endl;
+		  renderMode = 2;
 		  break;
 	  case '3':
 		  cout << "You pressed 3" << endl;
+		  renderMode = 3;
 		  break;
 		case '4':
 		  cout << "You pressed 4" << endl;
+		  renderMode = 4;
 		  break;
 
     case ' ':
@@ -394,7 +410,7 @@ void initScene(int argc, char *argv[])
 
 	glGenVertexArrays(1, &hmVertexArray);
 	glBindVertexArray(hmVertexArray);
-	glBindBuffer(GL_ARRAY_BUFFER, hmVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, hmVertexArray); //was buffer
 
 	GLuint loc =
 					glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
