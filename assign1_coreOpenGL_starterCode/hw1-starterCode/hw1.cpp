@@ -1,9 +1,9 @@
 ﻿/*
-  CSCI 420 Computer Graphics, USC
-  Assignment 1: Height Fields with Shaders.
-  C++ starter code
+	CSCI 420 Computer Graphics, USC
+	Assignment 1: Height Fields with Shaders.
+	C++ starter code
 
-  Student username: <type your USC username here>
+	Student username: <type your USC username here>
 */
 
 #include "basicPipelineProgram.h"
@@ -16,19 +16,20 @@
 #include <cstring>
 
 #if defined(WIN32) || defined(_WIN32)
-  #ifdef _DEBUG
-    #pragma comment(lib, "glew32d.lib")
-  #else
-    #pragma comment(lib, "glew32.lib")
-  #endif
+	#ifdef _DEBUG
+		#pragma comment(lib, "glew32d.lib")
+	#else
+		#pragma comment(lib, "glew32.lib")
+	#endif
 #endif
 
 #if defined(WIN32) || defined(_WIN32)
-  char shaderBasePath[1024] = SHADER_BASE_PATH;
+	char shaderBasePath[1024] = SHADER_BASE_PATH;
 #else
-  char shaderBasePath[1024] = "../openGLHelper-starterCode";
+	char shaderBasePath[1024] = "../openGLHelper-starterCode";
 #endif
-
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 using namespace std;
 
 int mousePos[2]; // x,y coordinate of the mouse position
@@ -55,12 +56,18 @@ ImageIO * heightmapImage;
 
 GLuint triVertexBuffer, triColorVertexBuffer;
 GLuint triVertexArray;
-int sizeTri;
 
 
 //HeightMap Definitions
-GLuint hmVertexBuffer, hmColorVertexBuffer, hmVertexArray;
-int sizeHm;
+GLuint pointVBO, pointColorVBO, pointVAO;
+GLuint lineVBO, linesColorVBO, lineVAO;
+GLuint triVBO, triColorVBO, triVAO;
+
+int sizePoint, sizeLine, sizeTri;
+
+glm::vec3 * pointVertices;
+glm::vec3 * lineVertices;
+glm::vec3 * triVertices;
 
 
 
@@ -70,25 +77,98 @@ BasicPipelineProgram * pipelineProgram;
 // write a screenshot to the specified filename
 void saveScreenshot(const char * filename)
 {
-  unsigned char * screenshotData = new unsigned char[windowWidth * windowHeight * 3];
-  glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, screenshotData);
+	unsigned char * screenshotData = new unsigned char[windowWidth * windowHeight * 3];
+	glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, screenshotData);
 
-  ImageIO screenshotImg(windowWidth, windowHeight, 3, screenshotData);
+	ImageIO screenshotImg(windowWidth, windowHeight, 3, screenshotData);
 
-  if (screenshotImg.save(filename, ImageIO::FORMAT_JPEG) == ImageIO::OK)
-    cout << "File " << filename << " saved successfully." << endl;
-  else cout << "Failed to save file " << filename << '.' << endl;
+	if (screenshotImg.save(filename, ImageIO::FORMAT_JPEG) == ImageIO::OK)
+		cout << "File " << filename << " saved successfully." << endl;
+	else cout << "Failed to save file " << filename << '.' << endl;
 
-  delete [] screenshotData;
+	delete [] screenshotData;
 }
+
+/**********************************************/
+//HELPER FUNCTIONS
+/**********************************************/
+
+//creates three different vertex vectors
+void createHeightMap(ImageIO * heightmapImage){
+
+	 int imghi = heightmapImage->getHeight();
+	 int imgwd	= heightmapImage->getWidth();
+
+	 int size;
+
+	 /*Generate Three different vertex arrays*/
+
+	 //POINTS
+	 size = imghi * imgwd;
+	 sizePoint = size;
+	 pointVertices = new glm::vec3[size];
+	 for (int x = 0; x < imghi; x++) {
+		  for (int y = 0; y < imgwd; y++) {
+				pointVertices[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+		  		cout << "here " << endl;
+		  }
+	 }
+
+	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
+
+	 //LINES
+	 size = (imghi * imgwd * 2) - 2;
+	 sizeLine = size;
+	 lineVertices = new glm::vec3[size];
+
+	 int idx = 1;
+
+	 lineVertices[0] = pointVertices[0];
+	 lineVertices[1] = pointVertices[1];
+	 for (int i = 1; i < size - 1; i += 2) {
+		  lineVertices[i] = pointVertices[idx];
+		  lineVertices[i + 1] = pointVertices[idx];
+		  idx++;
+	 }
+	 lineVertices[size - 1] = pointVertices[idx];
+
+//	 TODO TRIANGLES & MODE 4
+}
+
+void bindBuffers(){
+
+	 //POINTS
+	 glGenBuffers(1, &pointVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizePoint, pointVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenVertexArrays(1, &pointVAO);
+	 glBindVertexArray(pointVAO);
+	 glBindBuffer(GL_ARRAY_BUFFER, pointVAO);
+
+	 //LINES
+	 glGenBuffers(1, &lineVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeLine, lineVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenVertexArrays(1, &lineVAO);
+	 glBindVertexArray(lineVAO);
+	 glBindBuffer(GL_ARRAY_BUFFER, lineVAO);
+
+}
+/**********************************************/
+//MAIN FUNCTIONS
+/**********************************************/
 
 void displayFunc()
 {
-  // render some stuff...
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// render some stuff...
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  matrix.SetMatrixMode(OpenGLMatrix::ModelView);
-  matrix.LoadIdentity();
+	matrix.SetMatrixMode(OpenGLMatrix::ModelView);
+	matrix.LoadIdentity();
 
 	//add function to change y based on size of image
 	matrix.LookAt(128, 200, 128, 128, 0, -128, 0, 0, -1);
@@ -109,18 +189,18 @@ void displayFunc()
 	 * INFO: 07-Shaders-26
 	 * */
 
-  float m[16];
-  matrix.SetMatrixMode(OpenGLMatrix::ModelView);
-  matrix.GetMatrix(m);
+	float m[16];
+	matrix.SetMatrixMode(OpenGLMatrix::ModelView);
+	matrix.GetMatrix(m);
 
-  float p[16];
-  matrix.SetMatrixMode(OpenGLMatrix::Projection);
-  matrix.GetMatrix(p);
-  //slide 5 hsas to uploade te array p to
-  // bind shader
+	float p[16];
+	matrix.SetMatrixMode(OpenGLMatrix::Projection);
+	matrix.GetMatrix(p);
+	//slide 5 hsas to uploade te array p to
+	// bind shader
 
 
-  pipelineProgram->Bind();
+	pipelineProgram->Bind();
 	/*slide 7 of tips*/
 	//added
 	pipelineProgram->Bind();
@@ -128,273 +208,169 @@ void displayFunc()
 	//It says to generate the VBO and VAO and upload them to GPU
 
 
-  // set variable
-  pipelineProgram->SetModelViewMatrix(m);
-  pipelineProgram->SetProjectionMatrix(p);
+	// set variable
+	pipelineProgram->SetModelViewMatrix(m);
+	pipelineProgram->SetProjectionMatrix(p);
 
-  glBindVertexArray(hmVertexArray);
+//	glBindVertexArray(pointVAO);
 
-	//create some global var to dict
+
+
+	
+	//maybe convert this into a swtich statement
 	if(renderMode==1){
-		glDrawArrays(GL_POINTS, 0, sizeHm);
+		pipelineProgram->Bind();
+		glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+		glBindVertexArray(pointVAO);
+		glDrawArrays(GL_POINTS, 0, sizePoint);
+
+		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 	}
 	else if(renderMode==2){
-		glDrawArrays(GL_LINES, 0, sizeHm);
+		 pipelineProgram->Bind();
+		 glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+		 glBindVertexArray(lineVAO);
+		 glDrawArrays(GL_LINES, 0, sizeLine);
+
+		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 	}
 	else if(renderMode==3){
-		glDrawArrays(GL_TRIANGLES, 0, sizeHm);
+		glDrawArrays(GL_TRIANGLES, 0, sizePoint);
 	}
 
-
-
-
-  glutSwapBuffers();
-}
-
-void idleFunc()
-{
-  // do some stuff... 
-
-  // for example, here, you can save the screenshots to disk (to make the animation)
-
-  // make the screen update 
-  glutPostRedisplay();
-}
-
-void reshapeFunc(int w, int h)
-{
-  glViewport(0, 0, w, h);
-
-  matrix.SetMatrixMode(OpenGLMatrix::Projection);
-  matrix.LoadIdentity();
-  matrix.Perspective(54.0f, (float)w / (float)h, 0.01f, 1000.0f);
-}
-
-void mouseMotionDragFunc(int x, int y)
-{
-
-	//xy records the coordinates of the mouse on the screen
-  // mouse has moved and one of the mouse buttons is pressed (dragging)
-
-  // the change in mouse position since the last invocation of this function
-  int mousePosDelta[2] = { x - mousePos[0], y - mousePos[1] };
-
-  switch (controlState)
-  {
-    // translate the landscape
-    case TRANSLATE:
-      if (leftMouseButton)
-      {
-        // control x,y translation via the left mouse button
-        landTranslate[0] += mousePosDelta[0] * 0.01f;
-        landTranslate[1] -= mousePosDelta[1] * 0.01f;
-      }
-      if (middleMouseButton)
-      {
-        // control z translation via the middle mouse button
-        landTranslate[2] += mousePosDelta[1] * 0.01f;
-      }
-      break;
-
-    // rotate the landscape
-    case ROTATE:
-      if (leftMouseButton)
-      {
-        // control x,y rotation via the left mouse button
-        landRotate[0] += mousePosDelta[1];
-        landRotate[1] += mousePosDelta[0];
-      }
-      if (middleMouseButton)
-      {
-        // control z rotation via the middle mouse button
-        landRotate[2] += mousePosDelta[1];
-      }
-      break;
-
-    // scale the landscape
-    case SCALE:
-      if (leftMouseButton)
-      {
-        // control x,y scaling via the left mouse button
-        landScale[0] *= 1.0f + mousePosDelta[0] * 0.01f;
-        landScale[1] *= 1.0f - mousePosDelta[1] * 0.01f;
-      }
-      if (middleMouseButton)
-      {
-        // control z scaling via the middle mouse button
-        landScale[2] *= 1.0f - mousePosDelta[1] * 0.01f;
-      }
-      break;
-  }
-
-  // store the new mouse position
-  mousePos[0] = x;
-  mousePos[1] = y;
-}
-
-void mouseMotionFunc(int x, int y)
-{
-  // mouse has moved
-  // store the new mouse position
-  mousePos[0] = x;
-  mousePos[1] = y;
-}
-
-void mouseButtonFunc(int button, int state, int x, int y)
-{
-  // a mouse button has has been pressed or depressed
-
-  // keep track of the mouse button state, in leftMouseButton, middleMouseButton, rightMouseButton variables
-  switch (button)
-  {
-    case GLUT_LEFT_BUTTON:
-      leftMouseButton = (state == GLUT_DOWN);
-    break;
-
-    case GLUT_MIDDLE_BUTTON:
-      middleMouseButton = (state == GLUT_DOWN);
-    break;
-
-    case GLUT_RIGHT_BUTTON:
-      rightMouseButton = (state == GLUT_DOWN);
-    break;
-  }
-
-  // keep track of whether CTRL and SHIFT keys are pressed
-  switch (glutGetModifiers())
-  {
-    case GLUT_ACTIVE_CTRL:
-      controlState = TRANSLATE;
-    break;
-
-    case GLUT_ACTIVE_SHIFT:
-      controlState = SCALE;
-    break;
-
-    // if CTRL and SHIFT are not pressed, we are in rotate mode
-    default:
-      controlState = ROTATE;
-    break;
-  }
-
-  // store the new mouse position
-  mousePos[0] = x;
-  mousePos[1] = y;
-}
-
-void keyboardFunc(unsigned char key, int x, int y)
-{
-  switch (key)
-  {
-    case 27: // ESC key
-      exit(0); // exit the program
-    break;
-		case '1':
-			cout << "You pressed 1" << endl;
-			renderMode = 1;
-		break;
-	  case '2':
-		  cout << "You pressed 2" << endl;
-		  renderMode = 2;
-		  break;
-	  case '3':
-		  cout << "You pressed 3" << endl;
-		  renderMode = 3;
-		  break;
-		case '4':
-		  cout << "You pressed 4" << endl;
-		  renderMode = 4;
-		  break;
-
-    case ' ':
-      cout << "You pressed the spacebar." << endl;
-    break;
-
-    case 'x':
-      // take a screenshot
-      saveScreenshot("screenshot.jpg");
-    break;
-  }
+	glutSwapBuffers();
 }
 
 void initScene(int argc, char *argv[])
 {
-  // load the image from a jpeg disk file to main memory
-  heightmapImage = new ImageIO();
-  if (heightmapImage->loadJPEG(argv[1]) != ImageIO::OK)
-  {
-    cout << "Error reading image " << argv[1] << "." << endl;
-    exit(EXIT_FAILURE);
-  }
+	// load the image from a jpeg disk file to main memory
+	heightmapImage = new ImageIO();
+	if (heightmapImage->loadJPEG(argv[1]) != ImageIO::OK)
+	{
+		cout << "Error reading image " << argv[1] << "." << endl;
+		exit(EXIT_FAILURE);
+	}
 
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	/*
 	 * read in the map
 	 * get the height for each point
 	 * */
+/*
+
 	int imghi = heightmapImage->getHeight();
 	int imgwd	= heightmapImage->getWidth();
+	int size = imghi * imgwd;
+	glm::vec3 * map;
+	//need to calculate the size of map
+	switch (renderMode) {
+		case 1: {//points
+			size = imghi * imgwd;
+			map = new glm::vec3[size];
+			for (int x = 0; x < imghi; x++) {
+				for (int y = 0; y < imgwd; y++) {
+					map[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+				}
+			}
+			break;
+		}
+		case 2: {//lines
+//			exit(1);
 
-	glm::vec3 * map = new glm::vec3 [imghi*imgwd];
+			glm::vec3 *temp = new glm::vec3[imghi * imgwd];
 
-	for(int x = 0; x<imghi; x++){
-		for(int y = 0; y<imgwd; y++){
-			map[y*imghi+x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) *0.25, -y);
+			size = (imghi * imgwd * 2) - 2;
+			map = new glm::vec3[size];
+
+			for (int x = 0; x < imghi; x++) {
+				for (int y = 0; y < imgwd; y++) {
+					temp[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+				}
+			}
+
+			int idx = 1;
+			map[0] = temp[0];
+			map[1] = temp[1];
+			for (int i = 1; i < size - 1; i += 2) {
+				map[i] = temp[idx];
+				map[i + 1] = temp[idx];
+				idx++;
+			}
+			map[size - 1] = temp[idx];
+
+			for (int i = 0; i < size; ++i) {
+				cout << glm::to_string(map[i]) << " " << endl;
+			}
+			cout << endl;
+			break;
+		}
+		case 3: {
+
+		}
+		default: {
+			cout << "Render Mode Error" << endl;
+			break;
 		}
 	}
+*/
 
 
-	std::cout << map[11][1] << std::endl;
 
 
 /*
-   modify the following code accordingly
-  glm::vec3 triangle[3] = {
-    glm::vec3(0, 0, 0),
-    glm::vec3(0, 1, 0),
-    glm::vec3(1, 0, 0)
-  };
+	 modify the following code accordingly
+	glm::vec3 triangle[3] = {
+		glm::vec3(0, 0, 0),
+		glm::vec3(0, 1, 0),
+		glm::vec3(1, 0, 0)
+	};
 
 	color will be all white right...
-  glm::vec4 color[3] = {
-    {0, 0, 1, 1},
-    {1, 0, 0, 1},
-    {0, 1, 0, 1},
-  };
+	glm::vec4 color[3] = {
+		{0, 0, 1, 1},
+		{1, 0, 0, 1},
+		{0, 1, 0, 1},
+	};
 
 	GLuint heightMapBuffer;
-	GLuint hmVertexArray;
+	GLuint pointVAO;
 	glGenBuffers(1, &triVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 3, triangle,
-	             GL_STATIC_DRAW);
+							 GL_STATIC_DRAW);
 
-  pipelineProgram = new BasicPipelineProgram;
-  int ret = pipelineProgram->Init(shaderBasePath);
-  if (ret != 0) abort();
+	pipelineProgram = new BasicPipelineProgram;
+	int ret = pipelineProgram->Init(shaderBasePath);
+	if (ret != 0) abort();
 
 	glGenVertexArrays(1, &triVertexArray);
 	glBindVertexArray(triVertexArray);
 	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
 
-  GLuint loc =
-      glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
-  glEnableVertexAttribArray(loc);
-  glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+	GLuint loc =
+			glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
-  glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer); //what
-  loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
-  glEnableVertexAttribArray(loc);
-  glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+	glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer); //what
+	loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
-  glEnable(GL_DEPTH_TEST);*/
+	glEnable(GL_DEPTH_TEST);*/
 
+	createHeightMap(heightmapImage);
+	bindBuffers();
 
-	glGenBuffers(1, &hmVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, hmVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * imghi*imgwd, map,
-	             GL_STATIC_DRAW);
+//	glGenBuffers(1, &pointVBO);
+//	glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * size, map,
+//							 GL_STATIC_DRAW);
 
 
 	//284... we dont need color rn right?
@@ -408,12 +384,11 @@ void initScene(int argc, char *argv[])
 	int ret = pipelineProgram->Init(shaderBasePath);
 	if (ret != 0) abort();
 
-	glGenVertexArrays(1, &hmVertexArray);
-	glBindVertexArray(hmVertexArray);
-	glBindBuffer(GL_ARRAY_BUFFER, hmVertexArray); //was buffer
+//	glGenVertexArrays(1, &pointVAO);
+//	glBindVertexArray(pointVAO);
+//	glBindBuffer(GL_ARRAY_BUFFER, pointVAO);
 
-	GLuint loc =
-					glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+	GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
 	glEnableVertexAttribArray(loc);
 	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
@@ -428,77 +403,249 @@ void initScene(int argc, char *argv[])
 
 
 //  sizeTri = 3;
-	sizeHm = imghi*imgwd;
+//	sizeHm = size;
 
-  std::cout << "GL error: " << glGetError() << std::endl;
+//	cout << size << endl;
+
+	std::cout << "GL error: " << glGetError() << std::endl;
+}
+
+/**********************************************/
+//AUXILIARY FUNCTIONS
+/**********************************************/
+
+void idleFunc()
+{
+	// do some stuff...
+
+	// for example, here, you can save the screenshots to disk (to make the animation)
+
+	// make the screen update
+	glutPostRedisplay();
+}
+
+void reshapeFunc(int w, int h)
+{
+	glViewport(0, 0, w, h);
+
+	matrix.SetMatrixMode(OpenGLMatrix::Projection);
+	matrix.LoadIdentity();
+	matrix.Perspective(54.0f, (float)w / (float)h, 0.01f, 1000.0f);
+}
+
+void mouseMotionDragFunc(int x, int y)
+{
+
+	//xy records the coordinates of the mouse on the screen
+	// mouse has moved and one of the mouse buttons is pressed (dragging)
+
+	// the change in mouse position since the last invocation of this function
+	int mousePosDelta[2] = { x - mousePos[0], y - mousePos[1] };
+
+	switch (controlState)
+	{
+		// translate the landscape
+		case TRANSLATE:
+			if (leftMouseButton)
+			{
+				// control x,y translation via the left mouse button
+				landTranslate[0] += mousePosDelta[0] * 0.01f;
+				landTranslate[1] -= mousePosDelta[1] * 0.01f;
+			}
+			if (middleMouseButton)
+			{
+				// control z translation via the middle mouse button
+				landTranslate[2] += mousePosDelta[1] * 0.01f;
+			}
+			break;
+
+		// rotate the landscape
+		case ROTATE:
+			if (leftMouseButton)
+			{
+				// control x,y rotation via the left mouse button
+				landRotate[0] += mousePosDelta[1];
+				landRotate[1] += mousePosDelta[0];
+			}
+			if (middleMouseButton)
+			{
+				// control z rotation via the middle mouse button
+				landRotate[2] += mousePosDelta[1];
+			}
+			break;
+
+		// scale the landscape
+		case SCALE:
+			if (leftMouseButton)
+			{
+				// control x,y scaling via the left mouse button
+				landScale[0] *= 1.0f + mousePosDelta[0] * 0.01f;
+				landScale[1] *= 1.0f - mousePosDelta[1] * 0.01f;
+			}
+			if (middleMouseButton)
+			{
+				// control z scaling via the middle mouse button
+				landScale[2] *= 1.0f - mousePosDelta[1] * 0.01f;
+			}
+			break;
+	}
+
+	// store the new mouse position
+	mousePos[0] = x;
+	mousePos[1] = y;
+}
+
+void mouseMotionFunc(int x, int y)
+{
+	// mouse has moved
+	// store the new mouse position
+	mousePos[0] = x;
+	mousePos[1] = y;
+}
+
+void mouseButtonFunc(int button, int state, int x, int y)
+{
+	// a mouse button has has been pressed or depressed
+
+	// keep track of the mouse button state, in leftMouseButton, middleMouseButton, rightMouseButton variables
+	switch (button)
+	{
+		case GLUT_LEFT_BUTTON:
+			leftMouseButton = (state == GLUT_DOWN);
+		break;
+
+		case GLUT_MIDDLE_BUTTON:
+			middleMouseButton = (state == GLUT_DOWN);
+		break;
+
+		case GLUT_RIGHT_BUTTON:
+			rightMouseButton = (state == GLUT_DOWN);
+		break;
+	}
+
+	// keep track of whether CTRL and SHIFT keys are pressed
+	switch (glutGetModifiers())
+	{
+		case GLUT_ACTIVE_CTRL:
+			controlState = TRANSLATE;
+		break;
+
+		case GLUT_ACTIVE_SHIFT:
+			controlState = SCALE;
+		break;
+
+		// if CTRL and SHIFT are not pressed, we are in rotate mode
+		default:
+			controlState = ROTATE;
+		break;
+	}
+
+	// store the new mouse position
+	mousePos[0] = x;
+	mousePos[1] = y;
+}
+
+void keyboardFunc(unsigned char key, int x, int y)
+{
+	switch (key)
+	{
+		case 27: // ESC key
+			exit(0); // exit the program
+		break;
+		case '1':
+			cout << "Rendering with points" << endl;
+			renderMode = 1;
+		break;
+		case '2':
+			cout << "Rendering with lines" << endl;
+			renderMode = 2;
+			break;
+		case '3':
+			cout << "Rendering with triangles" << endl;
+			renderMode = 3;
+			break;
+		case '4':
+			cout << "You pressed 4" << endl;
+			renderMode = 4;
+			break;
+
+		case ' ':
+			cout << "You pressed the spacebar." << endl;
+		break;
+
+		case 'x':
+			// take a screenshot
+			saveScreenshot("screenshot.jpg");
+		break;
+	}
 }
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
-  {
-    cout << "The arguments are incorrect." << endl;
-    cout << "usage: ./hw1 <heightmap file>" << endl;
-    exit(EXIT_FAILURE);
-  }
+	if (argc != 2)
+	{
+		cout << "The arguments are incorrect." << endl;
+		cout << "usage: ./hw1 <heightmap file>" << endl;
+		exit(EXIT_FAILURE);
+	}
 
-  cout << "Initializing GLUT..." << endl;
-  glutInit(&argc,argv);
+	cout << "Initializing GLUT..." << endl;
+	glutInit(&argc,argv);
 
-  cout << "Initializing OpenGL..." << endl;
+	cout << "Initializing OpenGL..." << endl;
 
-  #ifdef __APPLE__
-    glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
-  #else
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
-  #endif
+	#ifdef __APPLE__
+		glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
+	#else
+		glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
+	#endif
 
-  glutInitWindowSize(windowWidth, windowHeight);
-  glutInitWindowPosition(0, 0);  
-  glutCreateWindow(windowTitle);
+	glutInitWindowSize(windowWidth, windowHeight);
+	glutInitWindowPosition(0, 0);
+	glutCreateWindow(windowTitle);
 
-  cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
-  cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << endl;
-  cout << "Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
+	cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << endl;
+	cout << "Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 
-  #ifdef __APPLE__
-    // This is needed on recent Mac OS X versions to correctly display the window.
-    glutReshapeWindow(windowWidth - 1, windowHeight - 1);
-  #endif
+	#ifdef __APPLE__
+		// This is needed on recent Mac OS X versions to correctly display the window.
+		glutReshapeWindow(windowWidth - 1, windowHeight - 1);
+	#endif
 
-  // tells glut to use a particular display function to redraw 
-  glutDisplayFunc(displayFunc);
-  // perform animation inside idleFunc
-  glutIdleFunc(idleFunc);
-  // callback for mouse drags
-  glutMotionFunc(mouseMotionDragFunc);
-  // callback for idle mouse movement
-  glutPassiveMotionFunc(mouseMotionFunc);
-  // callback for mouse button changes
-  glutMouseFunc(mouseButtonFunc);
-  // callback for resizing the window
-  glutReshapeFunc(reshapeFunc);
-  // callback for pressing the keys on the keyboard
-  glutKeyboardFunc(keyboardFunc);
+	// tells glut to use a particular display function to redraw
+	glutDisplayFunc(displayFunc);
+	// perform animation inside idleFunc
+	glutIdleFunc(idleFunc);
+	// callback for mouse drags
+	glutMotionFunc(mouseMotionDragFunc);
+	// callback for idle mouse movement
+	glutPassiveMotionFunc(mouseMotionFunc);
+	// callback for mouse button changes
+	glutMouseFunc(mouseButtonFunc);
+	// callback for resizing the window
+	glutReshapeFunc(reshapeFunc);
+	// callback for pressing the keys on the keyboard
+	glutKeyboardFunc(keyboardFunc);
 
-  // init glew
-  #ifdef __APPLE__
-    // nothing is needed on Apple
-  #else
-    // Windows, Linux
-    GLint result = glewInit();
-    if (result != GLEW_OK)
-    {
-      cout << "error: " << glewGetErrorString(result) << endl;
-      exit(EXIT_FAILURE);
-    }
-  #endif
+	// init glew
+	#ifdef __APPLE__
+		// nothing is needed on Apple
+	#else
+		// Windows, Linux
+		GLint result = glewInit();
+		if (result != GLEW_OK)
+		{
+			cout << "error: " << glewGetErrorString(result) << endl;
+			exit(EXIT_FAILURE);
+		}
+	#endif
 
-  // do initialization
-  initScene(argc, argv);
+	// do initialization
+	initScene(argc, argv);
 
-  // sink forever into the glut loop
-  glutMainLoop();
+	// sink forever into the glut loop
+	glutMainLoop();
 }
 
 
