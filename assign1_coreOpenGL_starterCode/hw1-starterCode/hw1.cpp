@@ -134,7 +134,26 @@ void createHeightMap(ImageIO * heightmapImage){
 	 }
 	 lineVertices[size - 1] = pointVertices[idx];
 
-//	 TODO TRIANGLES & MODE 4
+
+	 //TRIANGLES
+	 size = (((imghi * imgwd)-3)+1)*3;
+	 sizeTri = size;
+	 triVertices = new glm::vec3[size];
+
+	 idx = 1;
+
+	 triVertices[0] = pointVertices[0];
+	 triVertices[1] = pointVertices[1];
+	 triVertices[2] = pointVertices[2];
+	 for (int i = 3; i < size-2; i += 3) {
+		  triVertices[i] = pointVertices[idx];
+		  triVertices[i + 1] = pointVertices[idx+1];
+		  triVertices[i + 2] = pointVertices[idx+2];
+		  idx++;
+	 }
+
+
+//	 TODO MODE 4
 }
 
 void bindBuffers(){
@@ -159,6 +178,15 @@ void bindBuffers(){
 	 glBindVertexArray(lineVAO);
 	 glBindBuffer(GL_ARRAY_BUFFER, lineVAO);
 
+	 //TRIANGLES
+	 glGenBuffers(1, &triVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, triVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, triVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenVertexArrays(1, &triVAO);
+	 glBindVertexArray(triVAO);
+	 glBindBuffer(GL_ARRAY_BUFFER, triVAO);
 }
 /**********************************************/
 //MAIN FUNCTIONS
@@ -179,18 +207,14 @@ void displayFunc()
 	matrix.Rotate(landRotate[0], 1, 0, 0);
 	matrix.Rotate(landRotate[1], 0, 1, 0);
 	matrix.Rotate(landRotate[2], 0, 0, 1);
-
 	matrix.Translate(landTranslate[0],landTranslate[1],landTranslate[2]);
-
 	matrix.Scale(landScale[0],landScale[1],landScale[2]);
-
 
 	/*
 	 * m is the modelview matrix
 	 * p is the projection matrix
 	 * INFO: 07-Shaders-26
 	 * */
-
 	float m[16];
 	matrix.SetMatrixMode(OpenGLMatrix::ModelView);
 	matrix.GetMatrix(m);
@@ -206,19 +230,10 @@ void displayFunc()
 	/*slide 7 of tips*/
 	//added
 	pipelineProgram->Bind();
-
-	//It says to generate the VBO and VAO and upload them to GPU
-
-
 	// set variable
 	pipelineProgram->SetModelViewMatrix(m);
 	pipelineProgram->SetProjectionMatrix(p);
 
-//	glBindVertexArray(pointVAO);
-
-
-
-	
 	//maybe convert this into a swtich statement
 	if(renderMode==1){
 		pipelineProgram->Bind();
@@ -241,7 +256,14 @@ void displayFunc()
 		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 	}
 	else if(renderMode==3){
-		glDrawArrays(GL_TRIANGLES, 0, sizePoint);
+		 pipelineProgram->Bind();
+		 glBindBuffer(GL_ARRAY_BUFFER, triVBO);
+		 glBindVertexArray(triVAO);
+		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
+
+		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 	}
 
 	glutSwapBuffers();
