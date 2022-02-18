@@ -110,14 +110,13 @@ void createHeightMap(ImageIO * heightmapImage){
 	 for (int x = 0; x < imghi; x++) {
 		  for (int y = 0; y < imgwd; y++) {
 				pointVertices[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-		  		cout << "here " << endl;
 		  }
 	 }
 
 	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
 
 	 //LINES
-	 size = (imghi * imgwd * 2) - 2;
+	 size = (imghi * imgwd * 4) - 2;
 	 sizeLine = size;
 	 lineVertices = new glm::vec3[size];
 
@@ -125,9 +124,12 @@ void createHeightMap(ImageIO * heightmapImage){
 
 	 lineVertices[0] = pointVertices[0];
 	 lineVertices[1] = pointVertices[1];
-	 for (int i = 1; i < size - 1; i += 2) {
+	 for (int i = 1; i < size - 1; i += 4) {
 		  lineVertices[i] = pointVertices[idx];
 		  lineVertices[i + 1] = pointVertices[idx];
+		  //horizontal lines
+		  lineVertices[i+2] = pointVertices[idx];
+		  lineVertices[i + 3] = pointVertices[idx+imghi+1];
 		  idx++;
 	 }
 	 lineVertices[size - 1] = pointVertices[idx];
