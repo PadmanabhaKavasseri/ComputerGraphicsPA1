@@ -116,31 +116,78 @@ void createHeightMap(ImageIO * heightmapImage){
 	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
 
 	 //LINES
-	 size = (imghi * imgwd * 4) - 2;
+//	 size = (imghi * imgwd * 4) - 2;
+	 size = ((imghi-1)*(imgwd-1) * 4) + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeLine = size;
 	 lineVertices = new glm::vec3[size];
 
 	 int idx = 1;
 
-	 lineVertices[0] = pointVertices[0];
+/*	 lineVertices[0] = pointVertices[0];
 	 lineVertices[1] = pointVertices[1];
-	 for (int i = 1; i < size - 1; i += 4) {
+	 for (int i = 2; i < size - 1; i += 4) {
 		  lineVertices[i] = pointVertices[idx];
 		  lineVertices[i + 1] = pointVertices[idx];
 		  //horizontal lines
 		  lineVertices[i+2] = pointVertices[idx];
-		  lineVertices[i + 3] = pointVertices[idx+imghi+1];
+		  lineVertices[i + 3] = pointVertices[idx+imghi];
 		  idx++;
 	 }
-	 lineVertices[size - 1] = pointVertices[idx];
+	 lineVertices[size - 1] = pointVertices[idx];*/
+
+	 idx = 0;
+	 for (int x = 0; x < imghi; x++) {
+		  for (int y = 0; y < imgwd; y++) {
+				if(x<imghi-1){
+					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+					 lineVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+//					 cout << "x" << endl;
+				}
+				if(y<imgwd-1){
+					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+//					 cout <<"this works" << endl;
+					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+//					 cout << "y" << endl;
+				}
+
+//				cout << "__  " << x<<","<<y<<endl;
+
+		  }
+	 }
+
 
 
 	 //TRIANGLES
-	 size = (((imghi * imgwd)-3)+1)*3;
+//	 size = (((imghi * imgwd)-3)+1)*3;
+	 size = ((imghi-1)*(imgwd-1) * 6) + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeTri = size;
 	 triVertices = new glm::vec3[size];
 
-	 idx = 1;
+	 idx = 0;
+	 for (int x = 0; x < imghi; x++) {
+		  for (int y = 0; y < imgwd; y++) {
+				if(x<imghi-1){
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+//					 cout << "x" << endl;
+				}
+				if(y<imgwd-1){
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+//					 cout <<"this works" << endl;
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y+1);
+//					 cout << "y" << endl;
+				}
+				if((x<imghi-1)&&(y<imgwd-1)){
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y+1, 0) * 0.25, -y+1);
+				}
+//				cout << "__  " << x<<","<<y<<endl;
+		  }
+	 }
+
+
+
+/*	 idx = 1;
 
 	 triVertices[0] = pointVertices[0];
 	 triVertices[1] = pointVertices[1];
@@ -150,7 +197,9 @@ void createHeightMap(ImageIO * heightmapImage){
 		  triVertices[i + 1] = pointVertices[idx+1];
 		  triVertices[i + 2] = pointVertices[idx+2];
 		  idx++;
-	 }
+	 }*/
+
+
 
 
 //	 TODO MODE 4
