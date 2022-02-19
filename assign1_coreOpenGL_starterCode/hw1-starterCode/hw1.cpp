@@ -159,28 +159,34 @@ void createHeightMap(ImageIO * heightmapImage){
 
 	 //TRIANGLES
 //	 size = (((imghi * imgwd)-3)+1)*3;
-	 size = ((imghi-1)*(imgwd-1) * 6) + (((imghi-1)*2) + ((imgwd-1) * 2));
+	 size = ((imghi-1)*(imgwd-1) * 6);// + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeTri = size;
 	 triVertices = new glm::vec3[size];
 
 	 idx = 0;
 	 for (int x = 0; x < imghi; x++) {
 		  for (int y = 0; y < imgwd; y++) {
-				if(x<imghi-1){
-					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
-//					 cout << "x" << endl;
-				}
-				if(y<imgwd-1){
-					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-//					 cout <<"this works" << endl;
-					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y+1);
-//					 cout << "y" << endl;
-				}
 				if((x<imghi-1)&&(y<imgwd-1)){
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y+1, 0) * 0.25, -y+1);
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y+1, 0) * 0.25, -y-1);
 				}
+//				else if(x<imghi-1){
+//					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+//					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+////					 cout << "x" << endl;
+//				}
+//				else if(y<imgwd-1){
+////					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+////					 cout <<"this works" << endl;
+//					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y+1);
+////					 cout << "y" << endl;
+//				}
+
 //				cout << "__  " << x<<","<<y<<endl;
 		  }
 	 }
