@@ -34,6 +34,7 @@ using namespace std;
 
 int mousePos[2]; // x,y coordinate of the mouse position
 int renderMode = 1;
+int mode = 0;
 int leftMouseButton = 0; // 1 if pressed, 0 if not 
 int middleMouseButton = 0; // 1 if pressed, 0 if not
 int rightMouseButton = 0; // 1 if pressed, 0 if not
@@ -63,11 +64,23 @@ GLuint pointVBO, pointColorVBO, pointVAO;
 GLuint lineVBO, linesColorVBO, lineVAO;
 GLuint triVBO, triColorVBO, triVAO;
 
+GLuint leftV, rightV, upV, downV, smoothVAO;
+
 int sizePoint, sizeLine, sizeTri;
 
 glm::vec3 * pointVertices;
 glm::vec3 * lineVertices;
 glm::vec3 * triVertices;
+
+glm::vec3 * leftVertices;
+glm::vec3 * rightVertices;
+glm::vec3 * upVertices;
+glm::vec3 * downVertices;
+
+
+glm::vec4 * pointVerticesColor;
+glm::vec4 * lineVerticesColor;
+glm::vec4 * triVerticesColor;
 
 
 
@@ -100,27 +113,31 @@ void createHeightMap(ImageIO * heightmapImage){
 	 int imgwd	= heightmapImage->getWidth();
 
 	 int size;
-
+	 float color;
 	 /*Generate Three different vertex arrays*/
 
 	 //POINTS
 	 size = imghi * imgwd;
 	 sizePoint = size;
 	 pointVertices = new glm::vec3[size];
+	 pointVerticesColor = new glm::vec4[size];
 	 for (int x = 0; x < imghi; x++) {
 		  for (int y = 0; y < imgwd; y++) {
 				pointVertices[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+				color = ((float) heightmapImage->getPixel(x, y, 0)) / (float)255.0f;
+				pointVerticesColor[y * imghi + x] = glm::vec4(color,color,color,1.0f);
+
 		  }
 	 }
 
-	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
+//	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
 
 	 //LINES
 //	 size = (imghi * imgwd * 4) - 2;
 	 size = ((imghi-1)*(imgwd-1) * 4) + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeLine = size;
 	 lineVertices = new glm::vec3[size];
-
+	 lineVerticesColor = new glm::vec4[size];
 	 int idx = 1;
 
 /*	 lineVertices[0] = pointVertices[0];
@@ -140,18 +157,22 @@ void createHeightMap(ImageIO * heightmapImage){
 		  for (int y = 0; y < imgwd; y++) {
 				if(x<imghi-1){
 					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+					 color = ((float) heightmapImage->getPixel(x, y, 0)) / (float)255.0f;
+					 lineVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
 					 lineVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
-//					 cout << "x" << endl;
+					 color = ((float) heightmapImage->getPixel(x+1, y, 0)) / (float)255.0f;
+					 lineVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 				}
 				if(y<imgwd-1){
 					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-//					 cout <<"this works" << endl;
+					 color = ((float) heightmapImage->getPixel(x, y, 0)) / (float)255.0f;
+					 lineVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
 					 lineVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
-//					 cout << "y" << endl;
+					 color = ((float) heightmapImage->getPixel(x, y+1, 0)) / (float)255.0f;
+					 lineVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 				}
-
-//				cout << "__  " << x<<","<<y<<endl;
-
 		  }
 	 }
 
@@ -162,18 +183,36 @@ void createHeightMap(ImageIO * heightmapImage){
 	 size = ((imghi-1)*(imgwd-1) * 6);// + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeTri = size;
 	 triVertices = new glm::vec3[size];
+	 triVerticesColor = new glm::vec4[size];
 
 	 idx = 0;
 	 for (int x = 0; x < imghi; x++) {
 		  for (int y = 0; y < imgwd; y++) {
 				if((x<imghi-1)&&(y<imgwd-1)){
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
-					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 color = ((float) heightmapImage->getPixel(x, y, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 color = ((float) heightmapImage->getPixel(x+1, y, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 color = ((float) heightmapImage->getPixel(x, y+1, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
+
+					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 color = ((float) heightmapImage->getPixel(x+1, y, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
+					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 color = ((float) heightmapImage->getPixel(x, y+1, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
+
 					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y+1, 0) * 0.25, -y-1);
+					 color = ((float) heightmapImage->getPixel(x+1, y+1, 0)) / (float)255.0f;
+					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 				}
 //				else if(x<imghi-1){
 //					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
@@ -219,6 +258,11 @@ void bindBuffers(){
 	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizePoint, pointVertices,
 					  GL_STATIC_DRAW);
 
+	 glGenBuffers(1, &pointColorVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, pointColorVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * sizePoint, pointVerticesColor,
+					  GL_STATIC_DRAW);
+
 	 glGenVertexArrays(1, &pointVAO);
 	 glBindVertexArray(pointVAO);
 	 glBindBuffer(GL_ARRAY_BUFFER, pointVAO);
@@ -227,6 +271,11 @@ void bindBuffers(){
 	 glGenBuffers(1, &lineVBO);
 	 glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
 	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeLine, lineVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenBuffers(1, &linesColorVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, linesColorVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * sizeLine, lineVerticesColor,
 					  GL_STATIC_DRAW);
 
 	 glGenVertexArrays(1, &lineVAO);
@@ -239,9 +288,35 @@ void bindBuffers(){
 	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, triVertices,
 					  GL_STATIC_DRAW);
 
+	 glGenBuffers(1, &triColorVBO);
+	 glBindBuffer(GL_ARRAY_BUFFER, triColorVBO);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * sizeTri, triVerticesColor,
+					  GL_STATIC_DRAW);
+
 	 glGenVertexArrays(1, &triVAO);
 	 glBindVertexArray(triVAO);
 	 glBindBuffer(GL_ARRAY_BUFFER, triVAO);
+
+	 //SMOOTHER
+	 glGenBuffers(1, &leftV);
+	 glBindBuffer(GL_ARRAY_BUFFER, leftV);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, leftVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenBuffers(1, &rightV);
+	 glBindBuffer(GL_ARRAY_BUFFER, rightV);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, rightVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenBuffers(1, &upV);
+	 glBindBuffer(GL_ARRAY_BUFFER, upV);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, upVertices,
+					  GL_STATIC_DRAW);
+
+	 glGenBuffers(1, &downV);
+	 glBindBuffer(GL_ARRAY_BUFFER, downV);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * sizeTri, downVertices,
+					  GL_STATIC_DRAW);
 }
 /**********************************************/
 //MAIN FUNCTIONS
@@ -283,42 +358,82 @@ void displayFunc()
 
 	pipelineProgram->Bind();
 	/*slide 7 of tips*/
-	//added
-	pipelineProgram->Bind();
 	// set variable
 	pipelineProgram->SetModelViewMatrix(m);
 	pipelineProgram->SetProjectionMatrix(p);
 
 	//maybe convert this into a swtich statement
 	if(renderMode==1){
-		pipelineProgram->Bind();
-		glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-		glBindVertexArray(pointVAO);
-		glDrawArrays(GL_POINTS, 0, sizePoint);
-
+		 pipelineProgram->Bind();
+		 glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
 		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
 		 glEnableVertexAttribArray(loc);
 		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, pointColorVBO);
+		 GLuint col = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+		 glEnableVertexAttribArray(col);
+		 glVertexAttribPointer(col, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		glBindVertexArray(pointVAO);
+		glDrawArrays(GL_POINTS, 0, sizePoint);
+
 	}
 	else if(renderMode==2){
 		 pipelineProgram->Bind();
 		 glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-		 glBindVertexArray(lineVAO);
-		 glDrawArrays(GL_LINES, 0, sizeLine);
-
 		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
 		 glEnableVertexAttribArray(loc);
 		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, linesColorVBO);
+		 GLuint col = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+		 glEnableVertexAttribArray(col);
+		 glVertexAttribPointer(col, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+		 glBindVertexArray(lineVAO);
+		 glDrawArrays(GL_LINES, 0, sizeLine);
+
 	}
 	else if(renderMode==3){
 		 pipelineProgram->Bind();
 		 glBindBuffer(GL_ARRAY_BUFFER, triVBO);
-		 glBindVertexArray(triVAO);
-		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
-
 		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
 		 glEnableVertexAttribArray(loc);
 		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, triColorVBO);
+		 loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindVertexArray(triVAO);
+		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
+	}
+	else if(renderMode==4){
+		 pipelineProgram->Bind();
+		 glBindBuffer(GL_ARRAY_BUFFER, leftV);
+		 GLuint l = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "left");
+		 glEnableVertexAttribArray(l);
+		 glVertexAttribPointer(l, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, rightV);
+		 GLuint r = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "right");
+		 glEnableVertexAttribArray(r);
+		 glVertexAttribPointer(r, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, upV);
+		 GLuint u = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "up");
+		 glEnableVertexAttribArray(u);
+		 glVertexAttribPointer(u, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, downV);
+		 GLuint d = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "down");
+		 glEnableVertexAttribArray(d);
+		 glVertexAttribPointer(d, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+
+		 glBindVertexArray(triVAO);
+		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
 	}
 
 	glutSwapBuffers();
@@ -334,7 +449,7 @@ void initScene(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(0.50f, 0.250f, 0.30f, 1.0f);
 
 	/*
 	 * read in the map
@@ -634,18 +749,22 @@ void keyboardFunc(unsigned char key, int x, int y)
 		case '1':
 			cout << "Rendering with points" << endl;
 			renderMode = 1;
+			mode = 0;
 		break;
 		case '2':
 			cout << "Rendering with lines" << endl;
 			renderMode = 2;
+			mode = 0;
 			break;
 		case '3':
 			cout << "Rendering with triangles" << endl;
 			renderMode = 3;
+			mode = 0;
 			break;
 		case '4':
 			cout << "You pressed 4" << endl;
 			renderMode = 4;
+			mode = 1;
 			break;
 
 		case ' ':
