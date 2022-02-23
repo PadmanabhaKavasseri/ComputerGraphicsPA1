@@ -7,12 +7,13 @@ out vec4 col;
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
-//uniform int mode;
+uniform int mode;
 
 float eps = 0.00001f;
 
 void main(){
-    int mode = 0;
+//    int mode = 1;
+//    std::cout << mode << std::endl;
     if (mode == 0){
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0f);
         col = color;
@@ -20,7 +21,9 @@ void main(){
     else{
         float smoothHeight = (left.y + right.y + down.y + up.y)/4.0f;
         col = smoothHeight * max(color,vec4(eps))/max(position.y,eps);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x, smoothHeight, position.z, 1.0f);
+//        gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x, smoothHeight, position.z, 1.0f);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x, down.y, position.z, 1.0f);
+
     }
   // compute the transformed and projected vertex position (into gl_Position) 
   // compute the vertex color (into col)

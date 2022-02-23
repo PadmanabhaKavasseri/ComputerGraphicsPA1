@@ -34,7 +34,7 @@ using namespace std;
 
 int mousePos[2]; // x,y coordinate of the mouse position
 int renderMode = 1;
-int mode = 0;
+
 int leftMouseButton = 0; // 1 if pressed, 0 if not 
 int middleMouseButton = 0; // 1 if pressed, 0 if not
 int rightMouseButton = 0; // 1 if pressed, 0 if not
@@ -53,7 +53,9 @@ int windowHeight = 720;
 char windowTitle[512] = "CSCI 420 homework I";
 
 ImageIO * heightmapImage;
+int imghi, imgwd;
 
+int sidx = 0;
 
 GLuint triVertexBuffer, triColorVertexBuffer;
 GLuint triVertexArray;
@@ -106,15 +108,55 @@ void saveScreenshot(const char * filename)
 //HELPER FUNCTIONS
 /**********************************************/
 
+void nborVertFill(int x, int y){
+	 float height;// = heightmapImage->getPixel(x, y, 0) * 0.25f;
+	 //left
+	 if(x>0){
+		  height = heightmapImage->getPixel(x-1, y, 0) * 0.25f;
+		  leftVertices[sidx] = glm::vec3(x-1,height,-y);
+	 }
+	 else{
+		  height = heightmapImage->getPixel(x, y, 0) * 0.25f;
+		  leftVertices[sidx] = glm::vec3(x,height,-y);
+	 }
+	 //right
+	 if(x < imgwd-1){
+		  height = heightmapImage->getPixel(x+1, y, 0) * 0.25f;
+		  rightVertices[sidx] = glm::vec3(x+1,height,-y);
+	 }
+	 else{
+		  height = heightmapImage->getPixel(x, y, 0) * 0.25f;
+		  rightVertices[sidx] = glm::vec3(x,height,-y);
+	 }
+	 //up
+	 if(y < imghi - 1){
+		  height = heightmapImage->getPixel(x, y+1, 0) * 0.25f;
+		  upVertices[sidx] = glm::vec3(x,height,-y-1);
+	 }
+	 else{
+		  height = heightmapImage->getPixel(x, y, 0) * 0.25f;
+		  upVertices[sidx] = glm::vec3(x,height,-y);
+	 }
+	 //down
+	 if(y > 0){
+		  height = heightmapImage->getPixel(x, y-1, 0) * 0.25f;
+		  downVertices[sidx] = glm::vec3(x,height,-y+1);
+	 }
+	 else{
+		  height = heightmapImage->getPixel(x, y, 0) * 0.25f;
+		  downVertices[sidx] = glm::vec3(x,height,-y);
+	 }
+	 sidx++;
+}
+
 //creates three different vertex vectors
 void createHeightMap(ImageIO * heightmapImage){
 
-	 int imghi = heightmapImage->getHeight();
-	 int imgwd	= heightmapImage->getWidth();
+	 imghi = heightmapImage->getHeight();
+	 imgwd = heightmapImage->getWidth();
 
 	 int size;
 	 float color;
-	 /*Generate Three different vertex arrays*/
 
 	 //POINTS
 	 size = imghi * imgwd;
@@ -130,7 +172,6 @@ void createHeightMap(ImageIO * heightmapImage){
 		  }
 	 }
 
-//	 cout << "num points " <<  pointVertices->length() << endl; // this is only three?
 
 	 //LINES
 //	 size = (imghi * imgwd * 4) - 2;
@@ -139,18 +180,6 @@ void createHeightMap(ImageIO * heightmapImage){
 	 lineVertices = new glm::vec3[size];
 	 lineVerticesColor = new glm::vec4[size];
 	 int idx = 1;
-
-/*	 lineVertices[0] = pointVertices[0];
-	 lineVertices[1] = pointVertices[1];
-	 for (int i = 2; i < size - 1; i += 4) {
-		  lineVertices[i] = pointVertices[idx];
-		  lineVertices[i + 1] = pointVertices[idx];
-		  //horizontal lines
-		  lineVertices[i+2] = pointVertices[idx];
-		  lineVertices[i + 3] = pointVertices[idx+imghi];
-		  idx++;
-	 }
-	 lineVertices[size - 1] = pointVertices[idx];*/
 
 	 idx = 0;
 	 for (int x = 0; x < imghi; x++) {
@@ -177,12 +206,15 @@ void createHeightMap(ImageIO * heightmapImage){
 	 }
 
 
-
 	 //TRIANGLES
 //	 size = (((imghi * imgwd)-3)+1)*3;
 	 size = ((imghi-1)*(imgwd-1) * 6);// + (((imghi-1)*2) + ((imgwd-1) * 2));
 	 sizeTri = size;
 	 triVertices = new glm::vec3[size];
+	 leftVertices = new glm::vec3[size];
+	 rightVertices =  new glm::vec3[size];
+	 upVertices = new glm::vec3[size];
+	 downVertices = new glm::vec3[size];
 	 triVerticesColor = new glm::vec4[size];
 
 	 idx = 0;
@@ -190,64 +222,38 @@ void createHeightMap(ImageIO * heightmapImage){
 		  for (int y = 0; y < imgwd; y++) {
 				if((x<imghi-1)&&(y<imgwd-1)){
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
+					 nborVertFill(x,y);
 					 color = ((float) heightmapImage->getPixel(x, y, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 nborVertFill(x+1,y);
 					 color = ((float) heightmapImage->getPixel(x+1, y, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 nborVertFill(x,y+1);
 					 color = ((float) heightmapImage->getPixel(x, y+1, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 
 					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
+					 nborVertFill(x+1,y);
 					 color = ((float) heightmapImage->getPixel(x+1, y, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y-1);
+					 nborVertFill(x,y+1);
 					 color = ((float) heightmapImage->getPixel(x, y+1, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 
 					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y+1, 0) * 0.25, -y-1);
+					 nborVertFill(x+1,y+1);
 					 color = ((float) heightmapImage->getPixel(x+1, y+1, 0)) / (float)255.0f;
 					 triVerticesColor[idx-1] = glm::vec4(color,color,color,1.0f);
 				}
-//				else if(x<imghi-1){
-//					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-//					 triVertices[idx++] = glm::vec3(x+1, heightmapImage->getPixel(x+1, y, 0) * 0.25, -y);
-////					 cout << "x" << endl;
-//				}
-//				else if(y<imgwd-1){
-////					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-////					 cout <<"this works" << endl;
-//					 triVertices[idx++] = glm::vec3(x, heightmapImage->getPixel(x, y+1, 0) * 0.25, -y+1);
-////					 cout << "y" << endl;
-//				}
-
-//				cout << "__  " << x<<","<<y<<endl;
 		  }
 	 }
-
-
-
-/*	 idx = 1;
-
-	 triVertices[0] = pointVertices[0];
-	 triVertices[1] = pointVertices[1];
-	 triVertices[2] = pointVertices[2];
-	 for (int i = 3; i < size-2; i += 3) {
-		  triVertices[i] = pointVertices[idx];
-		  triVertices[i + 1] = pointVertices[idx+1];
-		  triVertices[i + 2] = pointVertices[idx+2];
-		  idx++;
-	 }*/
-
-
-
-
-//	 TODO MODE 4
 }
 
 void bindBuffers(){
@@ -357,11 +363,13 @@ void displayFunc()
 
 
 	pipelineProgram->Bind();
+
+
 	/*slide 7 of tips*/
 	// set variable
 	pipelineProgram->SetModelViewMatrix(m);
 	pipelineProgram->SetProjectionMatrix(p);
-
+	pipelineProgram->SetRenderMode(0);
 	//maybe convert this into a swtich statement
 	if(renderMode==1){
 		 pipelineProgram->Bind();
@@ -380,7 +388,7 @@ void displayFunc()
 
 	}
 	else if(renderMode==2){
-		 pipelineProgram->Bind();
+//		 pipelineProgram->Bind();
 		 glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
 		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
 		 glEnableVertexAttribArray(loc);
@@ -410,7 +418,9 @@ void displayFunc()
 		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
 	}
 	else if(renderMode==4){
+
 		 pipelineProgram->Bind();
+		 pipelineProgram->SetRenderMode(1);
 		 glBindBuffer(GL_ARRAY_BUFFER, leftV);
 		 GLuint l = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "left");
 		 glEnableVertexAttribArray(l);
@@ -431,6 +441,15 @@ void displayFunc()
 		 glEnableVertexAttribArray(d);
 		 glVertexAttribPointer(d, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
+		 glBindBuffer(GL_ARRAY_BUFFER, triVBO);
+		 GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+		 glBindBuffer(GL_ARRAY_BUFFER, triColorVBO);
+		 loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
+		 glEnableVertexAttribArray(loc);
+		 glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
 		 glBindVertexArray(triVAO);
 		 glDrawArrays(GL_TRIANGLES, 0, sizeTri);
@@ -643,13 +662,13 @@ void mouseMotionDragFunc(int x, int y)
 			if (leftMouseButton)
 			{
 				// control x,y translation via the left mouse button
-				landTranslate[0] += mousePosDelta[0] * 0.01f;
-				landTranslate[1] -= mousePosDelta[1] * 0.01f;
+				landTranslate[0] += mousePosDelta[0] * 0.1f;
+				landTranslate[1] -= mousePosDelta[1] * 0.1f;
 			}
 			if (middleMouseButton)
 			{
 				// control z translation via the middle mouse button
-				landTranslate[2] += mousePosDelta[1] * 0.01f;
+				landTranslate[2] += mousePosDelta[1] * 0.1f;
 			}
 			break;
 
@@ -749,22 +768,22 @@ void keyboardFunc(unsigned char key, int x, int y)
 		case '1':
 			cout << "Rendering with points" << endl;
 			renderMode = 1;
-			mode = 0;
+//			glUniform1i(mode,0);
 		break;
 		case '2':
 			cout << "Rendering with lines" << endl;
 			renderMode = 2;
-			mode = 0;
+//			glUniform1i(mode,0);
 			break;
 		case '3':
 			cout << "Rendering with triangles" << endl;
 			renderMode = 3;
-			mode = 0;
+//			glUniform1i(mode,0);
 			break;
 		case '4':
-			cout << "You pressed 4" << endl;
+			cout << "Rendering with smoothing" << endl;
 			renderMode = 4;
-			mode = 1;
+//			glUniform1i(mode,1);
 			break;
 
 		case ' ':
