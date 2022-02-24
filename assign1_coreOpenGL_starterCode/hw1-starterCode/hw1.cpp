@@ -14,6 +14,9 @@
 
 #include <iostream>
 #include <cstring>
+#include <chrono>
+#include <thread>
+#include <math.h>
 
 #if defined(WIN32) || defined(_WIN32)
 	#ifdef _DEBUG
@@ -31,6 +34,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 using namespace std;
+using namespace std::chrono;
+using namespace std::this_thread;
+
 
 int mousePos[2]; // x,y coordinate of the mouse position
 int renderMode = 1;
@@ -79,11 +85,9 @@ glm::vec3 * rightVertices;
 glm::vec3 * upVertices;
 glm::vec3 * downVertices;
 
-
 glm::vec4 * pointVerticesColor;
 glm::vec4 * lineVerticesColor;
 glm::vec4 * triVerticesColor;
-
 
 
 OpenGLMatrix matrix;
@@ -337,7 +341,8 @@ void displayFunc()
 	matrix.LoadIdentity();
 
 	//add function to change y based on size of image
-	matrix.LookAt(128, 200, 128, 128, 0, -128, 0, 0, -1);
+//	matrix.LookAt(89, 250, 89, 128, 0, -128, 0, 0, -1);
+	matrix.LookAt(128, 250, 128, 128, 0, -128, 0, 0, -1);
 
 
 	matrix.Rotate(landRotate[0], 1, 0, 0);
@@ -346,11 +351,6 @@ void displayFunc()
 	matrix.Translate(landTranslate[0],landTranslate[1],landTranslate[2]);
 	matrix.Scale(landScale[0],landScale[1],landScale[2]);
 
-	/*
-	 * m is the modelview matrix
-	 * p is the projection matrix
-	 * INFO: 07-Shaders-26
-	 * */
 	float m[16];
 	matrix.SetMatrixMode(OpenGLMatrix::ModelView);
 	matrix.GetMatrix(m);
@@ -358,15 +358,9 @@ void displayFunc()
 	float p[16];
 	matrix.SetMatrixMode(OpenGLMatrix::Projection);
 	matrix.GetMatrix(p);
-	//slide 5 hsas to uploade te array p to
-	// bind shader
-
 
 	pipelineProgram->Bind();
 
-
-	/*slide 7 of tips*/
-	// set variable
 	pipelineProgram->SetModelViewMatrix(m);
 	pipelineProgram->SetProjectionMatrix(p);
 	pipelineProgram->SetRenderMode(0);
@@ -468,157 +462,16 @@ void initScene(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	glClearColor(0.50f, 0.250f, 0.30f, 1.0f);
-
-	/*
-	 * read in the map
-	 * get the height for each point
-	 * */
-/*
-
-	int imghi = heightmapImage->getHeight();
-	int imgwd	= heightmapImage->getWidth();
-	int size = imghi * imgwd;
-	glm::vec3 * map;
-	//need to calculate the size of map
-	switch (renderMode) {
-		case 1: {//points
-			size = imghi * imgwd;
-			map = new glm::vec3[size];
-			for (int x = 0; x < imghi; x++) {
-				for (int y = 0; y < imgwd; y++) {
-					map[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-				}
-			}
-			break;
-		}
-		case 2: {//lines
-//			exit(1);
-
-			glm::vec3 *temp = new glm::vec3[imghi * imgwd];
-
-			size = (imghi * imgwd * 2) - 2;
-			map = new glm::vec3[size];
-
-			for (int x = 0; x < imghi; x++) {
-				for (int y = 0; y < imgwd; y++) {
-					temp[y * imghi + x] = glm::vec3(x, heightmapImage->getPixel(x, y, 0) * 0.25, -y);
-				}
-			}
-
-			int idx = 1;
-			map[0] = temp[0];
-			map[1] = temp[1];
-			for (int i = 1; i < size - 1; i += 2) {
-				map[i] = temp[idx];
-				map[i + 1] = temp[idx];
-				idx++;
-			}
-			map[size - 1] = temp[idx];
-
-			for (int i = 0; i < size; ++i) {
-				cout << glm::to_string(map[i]) << " " << endl;
-			}
-			cout << endl;
-			break;
-		}
-		case 3: {
-
-		}
-		default: {
-			cout << "Render Mode Error" << endl;
-			break;
-		}
-	}
-*/
-
-
-
-
-/*
-	 modify the following code accordingly
-	glm::vec3 triangle[3] = {
-		glm::vec3(0, 0, 0),
-		glm::vec3(0, 1, 0),
-		glm::vec3(1, 0, 0)
-	};
-
-	color will be all white right...
-	glm::vec4 color[3] = {
-		{0, 0, 1, 1},
-		{1, 0, 0, 1},
-		{0, 1, 0, 1},
-	};
-
-	GLuint heightMapBuffer;
-	GLuint pointVAO;
-	glGenBuffers(1, &triVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 3, triangle,
-							 GL_STATIC_DRAW);
-
-	pipelineProgram = new BasicPipelineProgram;
-	int ret = pipelineProgram->Init(shaderBasePath);
-	if (ret != 0) abort();
-
-	glGenVertexArrays(1, &triVertexArray);
-	glBindVertexArray(triVertexArray);
-	glBindBuffer(GL_ARRAY_BUFFER, triVertexBuffer);
-
-	GLuint loc =
-			glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer); //what
-	loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (const void *)0);
-
-	glEnable(GL_DEPTH_TEST);*/
+	glClearColor(0.224f, 0.098f, 0.298f, 1.0f);
 
 	createHeightMap(heightmapImage);
 	bindBuffers();
 
-//	glGenBuffers(1, &pointVBO);
-//	glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-//	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * size, map,
-//							 GL_STATIC_DRAW);
-
-
-	//284... we dont need color rn right?
-
-//	glGenBuffers(1, &hmColorVertexBuffer);
-//	glBindBuffer(GL_ARRAY_BUFFER, hmColorVertexBuffer);
-//	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * imghi*imgwd, color, GL_STATIC_DRAW);
-
-
 	pipelineProgram = new BasicPipelineProgram;
 	int ret = pipelineProgram->Init(shaderBasePath);
 	if (ret != 0) abort();
 
-//	glGenVertexArrays(1, &pointVAO);
-//	glBindVertexArray(pointVAO);
-//	glBindBuffer(GL_ARRAY_BUFFER, pointVAO);
-
-	GLuint loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "position");
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
-
-
-	//301... we dont need color rn right?
-//	glBindBuffer(GL_ARRAY_BUFFER, triColorVertexBuffer);
-//	loc = glGetAttribLocation(pipelineProgram->GetProgramHandle(), "color");
-//	glEnableVertexAttribArray(loc);
-//	glVertexAttribPointer(loc, imghi*imgwd, GL_FLOAT, GL_FALSE, 0, (const void *)0);
-
 	glEnable(GL_DEPTH_TEST);
-
-
-//  sizeTri = 3;
-//	sizeHm = size;
-
-//	cout << size << endl;
 
 	std::cout << "GL error: " << glGetError() << std::endl;
 }
@@ -626,15 +479,39 @@ void initScene(int argc, char *argv[])
 /**********************************************/
 //AUXILIARY FUNCTIONS
 /**********************************************/
-
+int img_num = 0;
+float theta;
+string pathToFolder = "/Users/padmanabha/School/ComputerGraphics/ComputerGraphicsPA1/assign1_coreOpenGL_starterCode/screenshots/";
+string fileName = pathToFolder;
 void idleFunc()
 {
-	// do some stuff...
+	 sleep_for(nanoseconds(10000000));
 
-	// for example, here, you can save the screenshots to disk (to make the animation)
 
-	// make the screen update
-	glutPostRedisplay();
+	 if(img_num<=300){
+		  fileName += "p" + to_string(img_num) + ".jpg";
+		  saveScreenshot(fileName.c_str());
+		  fileName = pathToFolder;
+		  img_num++;
+	 }
+
+//	float r = 128.0f;
+//	 for (int i = 0; i < 360; ++i) {
+//		  matrix.LookAt(r* cos(i), 250, r* sin(i), 128, 0, -128, 0, 0, -1);
+//	 }
+
+/*//	 sleep_for(nanoseconds(1000000));
+//	 matrix.Translate(0,-1.8,0);
+//	 matrix.Rotate(0.5f, 0, 1, 0);
+////	 matrix.Rotate(0.5f, 1, 0, 0);
+//	 matrix.Translate(0,1.8,0);
+//
+//	 sleep_for(nanoseconds(10000));
+//	 sleep_until(system_clock::now() + seconds(2));*/
+/*	 matrix.LookAt(128.0 + (r * cos(M_PI/16)), 250, -128.0 + (r *sin(M_PI/16)), 128, 0, -128, 0, 0, -1);
+
+	 matrix.LookAt(89, 250, 128, 128, 0, -128, 0, 0, -1);*/
+	 glutPostRedisplay();
 }
 
 void reshapeFunc(int w, int h)
